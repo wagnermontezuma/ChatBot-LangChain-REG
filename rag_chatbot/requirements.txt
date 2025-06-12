@@ -1,0 +1,7 @@
+langchain-text-splitters
+langchain-community
+langgraph
+langchain-google-genai
+beautifulsoup4
+chromadb
+streamlit
