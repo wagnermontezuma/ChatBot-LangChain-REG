@@ -27,8 +27,22 @@ Pergunta: {question}
     # Para simplificar e garantir que as instruções sejam seguidas,
     # vamos criar um novo template com as instruções explícitas.
     custom_rag_prompt = ChatPromptTemplate.from_template(custom_template)
-    
+
     return custom_rag_prompt
+
+
+def get_analysis_prompt() -> ChatPromptTemplate:
+    """Retorna o prompt utilizado para analisar a consulta do usuário."""
+    return ChatPromptTemplate.from_messages([
+        (
+            "system",
+            "Analise a pergunta do usuário e determine a consulta principal e a seção relevante do documento (beginning, middle, end).",
+        ),
+        (
+            "human",
+            "Pergunta: {question}\n\nRetorne a consulta e a seção no formato JSON com os campos 'query' e 'section'.",
+        ),
+    ])
 
 if __name__ == "__main__":
     prompt = get_rag_prompt_template()

@@ -12,7 +12,6 @@ from typing import List, TypedDict, Literal
 from langchain_core.documents import Document
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate # Adicionar esta importação
 from langgraph.graph import StateGraph, END
 
 # Importar funções dos módulos criados
@@ -20,7 +19,7 @@ from rag_chatbot.src.document_loader import load_documents
 from rag_chatbot.src.text_splitter import split_documents
 from rag_chatbot.src.vector_store import create_vector_store, get_embeddings_model
 from rag_chatbot.src.llm_config import get_chat_model
-from rag_chatbot.src.prompt_template import get_rag_prompt_template
+from rag_chatbot.src.prompt_template import get_rag_prompt_template, get_analysis_prompt
 
 # 1. Definir o schema Search
 class Search(TypedDict):
@@ -86,10 +85,7 @@ def analyze_query(state: GraphState, structured_llm):
     question = state["question"]
     
     # Prompt para análise da consulta
-    analysis_prompt = ChatPromptTemplate.from_messages([
-        ("system", "Analise a pergunta do usuário e determine a consulta principal e a seção relevante do documento (beginning, middle, end)."),
-        ("human", "Pergunta: {question}\n\nRetorne a consulta e a seção no formato JSON com os campos 'query' e 'section'.")
-    ])
+    analysis_prompt = get_analysis_prompt()
 
     # Cadeia de análise
     analysis_chain = analysis_prompt | structured_llm
