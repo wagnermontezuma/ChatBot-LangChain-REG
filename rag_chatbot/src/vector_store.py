@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
+from langchain_core.tools import tool
 from .advanced_features import CachedEmbeddings
 import logging
 from .logging_config import setup_logging
@@ -47,6 +48,23 @@ def add_documents_to_vector_store(vector_store: Chroma, documents: list[Document
     """
     vector_store.add_documents(documents)
     logger.info(f"Adicionados {len(documents)} documentos ao vector store.")
+
+vector_store: Chroma | None = None
+
+
+@tool(response_format="content_and_artifact")
+def retrieve(query: str):
+    """Retrieve information related to a query."""
+    if vector_store is None:
+        return "", []
+    retrieved_docs = vector_store.similarity_search(query, k=2)
+    serialized = "\n\n".join(
+        (
+            f"Source: {doc.metadata}\n" f"Content: {doc.page_content}"
+            for doc in retrieved_docs
+        )
+    )
+    return serialized, retrieved_docs
 
 if __name__ == "__main__":
     # Exemplo de uso (normalmente seria chamado por outro módulo)
