@@ -1,19 +1,24 @@
 import os
+import argparse
 from dotenv import load_dotenv
 from src.document_loader import load_documents
 from src.text_splitter import split_documents
 from src.vector_store import create_vector_store
 from src.rag_pipeline import initialize_rag_components, create_rag_graph
+from src.config import DOC_URL
 
-def main():
+def main(doc_url: str | None = None):
     # Carrega as variáveis de ambiente do arquivo .env
     load_dotenv(dotenv_path='rag_chatbot/.env')
 
     print("Iniciando o processo de indexação de documentos...")
 
     # 1. Carregar documentos
+    if doc_url is None:
+        doc_url = DOC_URL
+
     print("Carregando documentos da URL...")
-    documents = load_documents()
+    documents = load_documents(doc_url)
     print(f"Total de documentos carregados: {len(documents)}")
 
     if not documents:
@@ -68,4 +73,8 @@ def main():
     print(final_state["answer"])
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Indexa documentos para o RAG.")
+    parser.add_argument("--url", help="URL dos documentos", default=None)
+    args = parser.parse_args()
+
+    main(doc_url=args.url)
