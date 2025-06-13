@@ -1,13 +1,12 @@
-import os
-from dotenv import load_dotenv
 from src.document_loader import load_documents
 from src.text_splitter import split_documents
 from src.vector_store import create_vector_store
 from src.rag_pipeline import initialize_rag_components, create_rag_graph
+from src.config import load_env, get_google_api_key
 
 def main():
-    # Carrega as variáveis de ambiente do arquivo .env
-    load_dotenv(dotenv_path='rag_chatbot/.env')
+    # Carrega as variáveis de ambiente apenas uma vez
+    load_env()
 
     print("Iniciando o processo de indexação de documentos...")
 
@@ -32,9 +31,7 @@ def main():
     # 3. Criar e popular o vector store (opcional para este teste, mas importante para o RAG)
     print("Criando e populando o vector store (isso pode levar um tempo e requer GOOGLE_API_KEY)...")
     try:
-        google_api_key = os.getenv("GOOGLE_API_KEY")
-        if not google_api_key:
-            raise ValueError("GOOGLE_API_KEY não está configurada no .env")
+        google_api_key = get_google_api_key()
 
         vector_store = create_vector_store(chunks) # create_vector_store já carrega a chave do ambiente
         print(f"Vector store populado com {vector_store._collection.count()} chunks.")

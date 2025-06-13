@@ -1,18 +1,17 @@
-import os
-from dotenv import load_dotenv
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 
-# Carrega as variáveis de ambiente do arquivo .env
-load_dotenv(dotenv_path='rag_chatbot/.env')
+from .config import get_google_api_key, load_env
+# Garante que as variáveis estejam carregadas apenas uma vez
+load_env()
 
 def get_embeddings_model(api_key: str = None):
     """
     Configura e retorna o modelo de embeddings do Google Generative AI.
     """
     if api_key is None:
-        api_key = os.getenv("GOOGLE_API_KEY")
+        api_key = get_google_api_key()
 
     if not api_key:
         raise ValueError("A variável de ambiente GOOGLE_API_KEY não está configurada ou não foi fornecida.")
