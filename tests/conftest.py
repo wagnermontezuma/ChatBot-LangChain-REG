@@ -190,6 +190,25 @@ def stub_libraries(monkeypatch):
     graph_module.END = "end"
     monkeypatch.setitem(sys.modules, "langgraph.graph", graph_module)
 
+    # langgraph.prebuilt
+    prebuilt_module = types.ModuleType("langgraph.prebuilt")
+    class DummyToolNode:
+        def __init__(self, tools):
+            self.tools = tools
+        def invoke(self, state):
+            return state
+    prebuilt_module.ToolNode = DummyToolNode
+    monkeypatch.setitem(sys.modules, "langgraph.prebuilt", prebuilt_module)
+
+    # langchain_core.tools
+    tools_module = types.ModuleType("langchain_core.tools")
+    def tool(*args, **kwargs):
+        def decorator(fn):
+            return fn
+        return decorator
+    tools_module.tool = tool
+    monkeypatch.setitem(sys.modules, "langchain_core.tools", tools_module)
+
     # Ensure GOOGLE_API_KEY exists so get_embeddings_model doesn't fail
     monkeypatch.setenv("GOOGLE_API_KEY", "test-key")
 
