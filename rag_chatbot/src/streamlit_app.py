@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 # Importar funções e componentes do pipeline RAG
-from src.rag_pipeline import initialize_rag_components, create_rag_graph, GraphState
+from src.rag_pipeline import initialize_rag_components, create_rag_graph
 from src.advanced_features import stream_rag_response # Importar a função de streaming
 
 # Carrega as variáveis de ambiente do arquivo .env
