@@ -1,20 +1,88 @@
+import os
+import time
+import logging
 import streamlit as st
 from typing import Iterator
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable, RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate # Necessário para o prompt de análise
+from langchain_core.prompts import ChatPromptTemplate
 
 # Importar componentes do pipeline RAG (apenas o necessário, LLM e prompt serão passados)
-from src.rag_pipeline import initialize_rag_components, create_rag_graph, GraphState
+from typing import TypedDict, List
+
+
+class Search(TypedDict):
+    query: str
+    section: str
+
+
+class GraphState(TypedDict):
+    question: str
+    query: Search
+    context: List[BaseMessage] | List
+    answer: str
+
+logger = logging.getLogger(__name__)
+
+# --- Configuração de Logging com LangSmith ---
+def configure_langsmith_logging() -> None:
+    """Ativa o rastreamento do LangSmith se a chave estiver configurada."""
+    if os.getenv("LANGSMITH_API_KEY"):
+        os.environ.setdefault("LANGCHAIN_TRACING_V2", "true")
+        logger.info("LangSmith tracing habilitado")
+
+
+class CachedEmbeddings:
+    """Wrapper de embeddings com cache simples."""
+
+    def __init__(self, base_model):
+        self.base = base_model
+        self.cache = {}
+
+    def _embed(self, text: str):
+        if text not in self.cache:
+            embed_fn = getattr(self.base, "embed_query", None)
+            if callable(embed_fn):
+                self.cache[text] = embed_fn(text)
+            else:
+                # Fallback para um embedding fictício baseado no hash
+                self.cache[text] = [hash(text) % 1000]
+        return self.cache[text]
+
+    def embed_documents(self, texts):
+        return [self._embed(t) for t in texts]
+
+    def embed_query(self, text):
+        return self._embed(text)
+
+
+_VECTOR_STORE = None
+
+
+def get_lazy_vector_store(loader_func):
+    """Carrega o vector store apenas na primeira chamada."""
+    global _VECTOR_STORE
+    if _VECTOR_STORE is None:
+        _VECTOR_STORE = loader_func()
+    return _VECTOR_STORE
+
+
+def validate_question(question: str) -> bool:
+    """Verifica se a pergunta é válida."""
+    return bool(question and question.strip())
 
 # --- Streaming de Respostas ---
 def stream_rag_response(question: str, rag_app: Runnable, llm_model: any, rag_prompt_template: ChatPromptTemplate, vector_store: any) -> Iterator[str]:
-    """
-    Processa uma pergunta através do pipeline RAG e retorna um iterador para streaming da resposta.
-    Recebe o LLM, prompt template e vector store como argumentos.
-    """
-    # Para streaming, precisamos do contexto. Vamos executar as etapas de análise e recuperação
+    """Gera resposta em modo streaming com tratamento de erros e métricas."""
+
+    if not validate_question(question):
+        yield "Pergunta vazia."
+        return
+
+    start_time = time.time()
+
+    # Para streaming, precisamos do contexto. Executa as etapas de análise e recuperação
     # de forma síncrona para obter o contexto.
     
     # Obter o LLM estruturado para análise de consulta
@@ -42,8 +110,14 @@ def stream_rag_response(question: str, rag_app: Runnable, llm_model: any, rag_pr
     formatted_prompt = rag_prompt_template.format_messages(context=formatted_context, question=question)
     
     # Invocar o LLM com streaming
-    for chunk in llm_model.stream(formatted_prompt):
-        yield StrOutputParser().invoke(chunk) # Parsear cada chunk
+    try:
+        for chunk in llm_model.stream(formatted_prompt):
+            yield StrOutputParser().invoke(chunk)
+    except Exception as exc:
+        logger.error("Falha no streaming: %s", exc)
+        yield "Desculpe, ocorreu um erro ao gerar a resposta."
+
+    logger.info("Tempo de resposta: %.2fs", time.time() - start_time)
 
 # --- Suporte para Múltiplos Modos de Invocação (Sync, Async) ---
 # O LangChain e LangGraph já suportam isso nativamente com .invoke() e .ainvoke()

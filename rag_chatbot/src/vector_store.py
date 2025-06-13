@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
+from .advanced_features import CachedEmbeddings
 import logging
 from .logging_config import setup_logging
 
@@ -30,7 +31,8 @@ def create_vector_store(documents: list[Document]):
     """
     Cria e popula um vector store em memória com os documentos fornecidos.
     """
-    embeddings = get_embeddings_model()
+    base_embeddings = get_embeddings_model()
+    embeddings = CachedEmbeddings(base_embeddings)
     # Usando Chroma como um exemplo de vector store em memória
     vector_store = Chroma.from_documents(
         documents=documents,

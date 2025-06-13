@@ -10,17 +10,15 @@ logger = logging.getLogger(__name__)
 # Carrega as variáveis de ambiente do arquivo .env
 load_dotenv(dotenv_path='rag_chatbot/.env')
 
-def get_chat_model(model_name: str = "gemini-1.5-pro", temperature: float = 0.7, api_key: str = None):
-    """
-    Configura e retorna o modelo de chat do Google Gemini.
-    """
+def get_chat_model(model_name: str = "gemini-1.5-pro", temperature: float = 0.7, api_key: str = None, timeout: int | None = None):
+    """Configura e retorna o modelo de chat do Google Gemini."""
     if api_key is None:
         api_key = os.getenv("GOOGLE_API_KEY")
     
     if not api_key:
         raise ValueError("A variável de ambiente GOOGLE_API_KEY não está configurada ou não foi fornecida.")
         
-    llm = ChatGoogleGenerativeAI(model=model_name, temperature=temperature, google_api_key=api_key)
+    llm = ChatGoogleGenerativeAI(model=model_name, temperature=temperature, google_api_key=api_key, timeout=timeout)
     return llm
 
 if __name__ == "__main__":
