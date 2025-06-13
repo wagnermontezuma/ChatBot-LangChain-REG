@@ -3,6 +3,11 @@ from dotenv import load_dotenv
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
+import logging
+from .logging_config import setup_logging
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 # Carrega as variáveis de ambiente do arquivo .env
 load_dotenv(dotenv_path='rag_chatbot/.env')
@@ -39,7 +44,7 @@ def add_documents_to_vector_store(vector_store: Chroma, documents: list[Document
     Adiciona documentos a um vector store existente.
     """
     vector_store.add_documents(documents)
-    print(f"Adicionados {len(documents)} documentos ao vector store.")
+    logger.info(f"Adicionados {len(documents)} documentos ao vector store.")
 
 if __name__ == "__main__":
     # Exemplo de uso (normalmente seria chamado por outro módulo)
@@ -50,9 +55,9 @@ if __name__ == "__main__":
         Document(page_content="O terceiro documento também será adicionado ao vector store.")
     ]
     
-    print("Criando vector store com documentos iniciais...")
+    logger.info("Criando vector store com documentos iniciais...")
     vs = create_vector_store(dummy_docs)
-    print(f"Vector store criado com {vs._collection.count()} documentos.")
+    logger.info(f"Vector store criado com {vs._collection.count()} documentos.")
 
     # Adicionando mais documentos
     more_docs = [
@@ -60,7 +65,7 @@ if __name__ == "__main__":
         Document(page_content="Mais um documento para o vector store.")
     ]
     add_documents_to_vector_store(vs, more_docs)
-    print(f"Total de documentos no vector store após adição: {vs._collection.count()}")
+    logger.info(f"Total de documentos no vector store após adição: {vs._collection.count()}")
 
     # Exemplo de busca (requer uma chave de API válida para embeddings)
     # query = "primeiro documento"

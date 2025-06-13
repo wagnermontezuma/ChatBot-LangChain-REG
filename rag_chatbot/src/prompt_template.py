@@ -1,5 +1,10 @@
 from langchain import hub
 from langchain_core.prompts import ChatPromptTemplate
+import logging
+from .logging_config import setup_logging
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 def get_rag_prompt_template():
     """
@@ -38,11 +43,11 @@ if __name__ == "__main__":
     example_question = "O que é inteligência artificial?"
     
     formatted_prompt = prompt.format(context=example_context, question=example_question)
-    print("--- Template de Prompt Customizado ---")
-    print(formatted_prompt)
+    logger.info("--- Template de Prompt Customizado ---")
+    logger.info(formatted_prompt)
 
     example_context_no_answer = "O céu é azul."
     example_question_no_answer = "Qual a cor do sol?"
     formatted_prompt_no_answer = prompt.format(context=example_context_no_answer, question=example_question_no_answer)
-    print("\n--- Template de Prompt Customizado (Cenário 'não sei') ---")
-    print(formatted_prompt_no_answer)
+    logger.info("\n--- Template de Prompt Customizado (Cenário 'não sei') ---")
+    logger.info(formatted_prompt_no_answer)
