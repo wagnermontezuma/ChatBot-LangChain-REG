@@ -4,6 +4,7 @@ from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable, RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate # Necessário para o prompt de análise
+from rag_chatbot.src.prompt_template import get_analysis_prompt
 
 # Importar componentes do pipeline RAG (apenas o necessário, LLM e prompt serão passados)
 from src.rag_pipeline import initialize_rag_components, create_rag_graph, GraphState
@@ -20,11 +21,8 @@ def stream_rag_response(question: str, rag_app: Runnable, llm_model: any, rag_pr
     # Obter o LLM estruturado para análise de consulta
     structured_llm = llm_model.with_structured_output(GraphState.__annotations__['query']) # Reutiliza o schema Search do GraphState
 
-    # Prompt para análise da consulta (duplicado de rag_pipeline para evitar dependência circular)
-    analysis_prompt = ChatPromptTemplate.from_messages([
-        ("system", "Analise a pergunta do usuário e determine a consulta principal e a seção relevante do documento (beginning, middle, end)."),
-        ("human", "Pergunta: {question}\n\nRetorne a consulta e a seção no formato JSON com os campos 'query' e 'section'.")
-    ])
+    # Prompt para análise da consulta
+    analysis_prompt = get_analysis_prompt()
     analysis_chain = analysis_prompt | structured_llm
     
     # Analisar a consulta
