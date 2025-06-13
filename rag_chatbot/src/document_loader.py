@@ -1,5 +1,10 @@
 from langchain_community.document_loaders import WebBaseLoader
 from bs4 import BeautifulSoup, SoupStrainer
+import logging
+from .logging_config import setup_logging
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 def load_documents(url: str = "https://lilianweng.github.io/posts/2023-06-23-agent/"):
     """
@@ -17,6 +22,6 @@ def load_documents(url: str = "https://lilianweng.github.io/posts/2023-06-23-age
 
 if __name__ == "__main__":
     docs = load_documents()
-    print(f"Documentos carregados: {len(docs)}")
+    logger.info(f"Documentos carregados: {len(docs)}")
     if docs:
-        print(f"Conteúdo do primeiro documento (parcial): {docs[0].page_content[:500]}...")
+        logger.info(f"Conteúdo do primeiro documento (parcial): {docs[0].page_content[:500]}...")

@@ -1,5 +1,10 @@
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
+import logging
+from .logging_config import setup_logging
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 def split_documents(documents: list[Document]):
     """
@@ -30,7 +35,7 @@ if __name__ == "__main__":
     dummy_doc = Document(page_content="Este é um texto de exemplo para testar o text splitter. Ele precisa ser longo o suficiente para ser dividido em múltiplos chunks. Vamos adicionar mais conteúdo para garantir que o chunk_size e chunk_overlap sejam efetivos. " * 20)
     
     chunks = split_documents([dummy_doc])
-    print(f"Total de chunks criados: {len(chunks)}")
+    logger.info(f"Total de chunks criados: {len(chunks)}")
     if chunks:
-        print(f"Primeiro chunk (parcial): {chunks[0].page_content[:200]}...")
-        print(f"Segundo chunk (parcial): {chunks[1].page_content[:200]}...")
+        logger.info(f"Primeiro chunk (parcial): {chunks[0].page_content[:200]}...")
+        logger.info(f"Segundo chunk (parcial): {chunks[1].page_content[:200]}...")

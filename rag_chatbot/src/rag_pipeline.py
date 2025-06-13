@@ -1,5 +1,6 @@
 import sys
 import os
+import logging
 
 # Adiciona o diretório raiz do projeto ao sys.path
 # Isso é necessário para que as importações relativas funcionem corretamente
@@ -21,6 +22,10 @@ from rag_chatbot.src.text_splitter import split_documents
 from rag_chatbot.src.vector_store import create_vector_store, get_embeddings_model
 from rag_chatbot.src.llm_config import get_chat_model
 from rag_chatbot.src.prompt_template import get_rag_prompt_template
+from rag_chatbot.src.logging_config import setup_logging
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 # 1. Definir o schema Search
 class Search(TypedDict):
@@ -55,7 +60,7 @@ def initialize_rag_components():
     """
     Inicializa e retorna os componentes RAG (LLM, Prompt, Vector Store, Retriever, Structured LLM).
     """
-    print("Inicializando componentes RAG...")
+    logger.info("Inicializando componentes RAG...")
     
     # Carregar e dividir documentos para o vector store
     documents = load_documents()
@@ -69,7 +74,7 @@ def initialize_rag_components():
     # Configurar LLM estruturado para análise de consulta
     structured_llm = llm.with_structured_output(Search)
     
-    print("Componentes RAG inicializados.")
+    logger.info("Componentes RAG inicializados.")
     return {
         "vector_store": vector_store,
         "llm": llm,
@@ -82,7 +87,7 @@ def analyze_query(state: GraphState, structured_llm):
     """
     Analisa a pergunta do usuário para extrair a consulta e a seção.
     """
-    print("---ANALISANDO CONSULTA---")
+    logger.info("---ANALISANDO CONSULTA---")
     question = state["question"]
     
     # Prompt para análise da consulta
@@ -97,14 +102,14 @@ def analyze_query(state: GraphState, structured_llm):
     # Invocar a cadeia de análise
     parsed_query = analysis_chain.invoke({"question": question})
     
-    print(f"Consulta analisada: {parsed_query}")
+    logger.info(f"Consulta analisada: {parsed_query}")
     return {"question": question, "query": parsed_query}
 
 def retrieve(state: GraphState, vector_store):
     """
     Busca documentos similares usando o retriever com filtros baseados na seção.
     """
-    print("---RECUPERANDO CONTEXTO---")
+    logger.info("---RECUPERANDO CONTEXTO---")
     question = state["question"]
     parsed_query = state["query"]
     
@@ -121,7 +126,7 @@ def generate(state: GraphState, llm, rag_prompt):
     """
     Gera resposta usando o LLM e prompt template.
     """
-    print("---GERANDO RESPOSTA---")
+    logger.info("---GERANDO RESPOSTA---")
     question = state["question"]
     context = state["context"]
 
@@ -181,13 +186,13 @@ if __name__ == "__main__":
     ]
 
     for question in test_questions:
-        print(f"\n---TESTANDO PIPELINE RAG COM A PERGUNTA: '{question}'---")
+        logger.info(f"---TESTANDO PIPELINE RAG COM A PERGUNTA: '{question}'---")
         final_state = rag_app.invoke({"question": question})
 
-        print("\n---CONTEXTO RECUPERADO---")
+        logger.info("---CONTEXTO RECUPERADO---")
         for i, doc in enumerate(final_state["context"]):
-            print(f"Documento {i+1} (parcial): {doc.page_content[:300]}...")
-            print(f"Seção: {doc.metadata.get('section', 'N/A')}")
+            logger.info(f"Documento {i+1} (parcial): {doc.page_content[:300]}...")
+            logger.info(f"Seção: {doc.metadata.get('section', 'N/A')}")
 
-        print("\n---RESPOSTA GERADA---")
-        print(final_state["answer"])
+        logger.info("---RESPOSTA GERADA---")
+        logger.info(final_state["answer"])
