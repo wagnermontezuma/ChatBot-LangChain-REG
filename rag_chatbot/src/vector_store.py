@@ -21,17 +21,20 @@ def get_embeddings_model(api_key: str = None):
     # O modelo de embeddings do Google é geralmente "models/embedding-001".
     return GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=api_key)
 
-def create_vector_store(documents: list[Document]):
+def create_vector_store(documents: list[Document], persist_directory: str | None = None):
     """
-    Cria e popula um vector store em memória com os documentos fornecidos.
+    Cria e popula um vector store com os documentos fornecidos.
+    Se ``persist_directory`` for informado, o Chroma será persistido nesse caminho.
     """
     embeddings = get_embeddings_model()
     # Usando Chroma como um exemplo de vector store em memória
     vector_store = Chroma.from_documents(
         documents=documents,
         embedding=embeddings,
-        # persist_directory="./chroma_db" # Para persistir em disco, se necessário
+        persist_directory=persist_directory,
     )
+    if persist_directory:
+        vector_store.persist()
     return vector_store
 
 def add_documents_to_vector_store(vector_store: Chroma, documents: list[Document]):

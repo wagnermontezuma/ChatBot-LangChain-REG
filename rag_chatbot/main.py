@@ -36,7 +36,8 @@ def main():
         if not google_api_key:
             raise ValueError("GOOGLE_API_KEY não está configurada no .env")
 
-        vector_store = create_vector_store(chunks) # create_vector_store já carrega a chave do ambiente
+        persist_directory = os.getenv("CHROMA_PERSIST_DIRECTORY")
+        vector_store = create_vector_store(chunks, persist_directory=persist_directory)
         print(f"Vector store populado com {vector_store._collection.count()} chunks.")
         print("\nSistema de indexação de documentos configurado e testado com sucesso.")
     except Exception as e:
