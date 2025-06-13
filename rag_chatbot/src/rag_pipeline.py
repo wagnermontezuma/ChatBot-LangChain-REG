@@ -60,7 +60,8 @@ def initialize_rag_components():
     # Carregar e dividir documentos para o vector store
     documents = load_documents()
     chunks = split_documents(documents)
-    vector_store = create_vector_store(chunks)
+    persist_directory = os.getenv("CHROMA_PERSIST_DIRECTORY")
+    vector_store = create_vector_store(chunks, persist_directory=persist_directory)
     
     # Configurar LLM e Prompt
     llm = get_chat_model()
