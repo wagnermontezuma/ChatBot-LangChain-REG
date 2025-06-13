@@ -34,11 +34,16 @@ def query_or_respond(state: MessagesState, llm):
     """Call the LLM which may return a tool call."""
     model = llm.bind_tools([retrieve])
     response = model.invoke(state["messages"])
-    return {"messages": state["messages"] + [response]}
+    return {"messages": [response]}
 
 
 # Node responsible for executing tool calls
-tools = ToolNode([retrieve])
+_tool_node = ToolNode([retrieve])
+
+
+def tools(state: MessagesState):
+    """Execute any requested tools and return updated state."""
+    return _tool_node.invoke(state)
 
 
 def generate(state: MessagesState, llm, prompt=None):
@@ -73,4 +78,4 @@ def generate(state: MessagesState, llm, prompt=None):
     prompt_messages = convo_msgs + [system_msg]
 
     answer = llm.invoke(prompt_messages)
-    return {"messages": messages + [AIMessage(content=answer)]}
+    return {"messages": [AIMessage(content=answer)]}
