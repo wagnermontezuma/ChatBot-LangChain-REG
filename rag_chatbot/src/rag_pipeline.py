@@ -9,12 +9,13 @@ project_root = os.path.abspath(os.path.join(script_dir, '..', '..'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from typing import List, TypedDict, Literal
+from typing import TypedDict, Literal
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langchain_core.documents import Document
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate # Adicionar esta importação
-from langgraph.graph import StateGraph, END
+from langgraph.graph import MessagesState, StateGraph, END
 
 # Importar funções dos módulos criados
 from rag_chatbot.src.document_loader import load_documents
@@ -35,21 +36,6 @@ class Search(TypedDict):
     query: str
     section: Literal["beginning", "middle", "end"]
 
-# 1. Definir a classe State
-class GraphState(TypedDict):
-    """
-    Representa o estado do nosso grafo.
-
-    Atributos:
-        question: Pergunta do usuário.
-        query: Consulta analisada (com query e section).
-        context: Documentos recuperados.
-        answer: Resposta gerada pelo LLM.
-    """
-    question: str
-    query: Search
-    context: List[Document]
-    answer: str
 
 # Variáveis globais (serão inicializadas e retornadas por initialize_rag_components)
 # Não serão mais None, mas sim os objetos reais.
@@ -83,73 +69,75 @@ def initialize_rag_components():
     }
 
 # 2. Implementar as funções do pipeline
-def analyze_query(state: GraphState, structured_llm):
-    """
-    Analisa a pergunta do usuário para extrair a consulta e a seção.
-    """
+def analyze_query(state: MessagesState, structured_llm):
+    """Analisa a mensagem do usuário e retorna uma chamada de ferramenta."""
     logger.info("---ANALISANDO CONSULTA---")
-    question = state["question"]
-    
-    # Prompt para análise da consulta
+    messages = state["messages"]
+    question = messages[-1].content
+
     analysis_prompt = ChatPromptTemplate.from_messages([
         ("system", "Analise a pergunta do usuário e determine a consulta principal e a seção relevante do documento (beginning, middle, end)."),
         ("human", "Pergunta: {question}\n\nRetorne a consulta e a seção no formato JSON com os campos 'query' e 'section'.")
     ])
-
-    # Cadeia de análise
     analysis_chain = analysis_prompt | structured_llm
-    
-    # Invocar a cadeia de análise
     parsed_query = analysis_chain.invoke({"question": question})
-    
-    logger.info(f"Consulta analisada: {parsed_query}")
-    return {"question": question, "query": parsed_query}
 
-def retrieve(state: GraphState, vector_store):
-    """
-    Busca documentos similares usando o retriever com filtros baseados na seção.
-    """
+    logger.info(f"Consulta analisada: {parsed_query}")
+    tool_call = {"id": "vs_query", "name": "vector_search", "args": parsed_query}
+    ai_msg = AIMessage(content="", additional_kwargs={"tool_calls": [tool_call]})
+    return {"messages": messages + [ai_msg]}
+
+def retrieve(state: MessagesState, vector_store):
+    """Recupera documentos conforme a consulta analisada."""
     logger.info("---RECUPERANDO CONTEXTO---")
-    question = state["question"]
-    parsed_query = state["query"]
-    
-    # Configurar o retriever com filtro
-    # O filtro é aplicado no momento da busca
+    messages = state["messages"]
+    ai_msg = messages[-1]
+    parsed_query = ai_msg.additional_kwargs["tool_calls"][0]["args"]
+
     retriever_with_filter = vector_store.as_retriever(
         search_kwargs={"filter": {"section": parsed_query["section"]}}
     )
-    
+
     documents = retriever_with_filter.invoke(parsed_query["query"])
-    return {"question": question, "query": parsed_query, "context": documents}
+    tool_call_id = ai_msg.additional_kwargs["tool_calls"][0].get("id", "vs_query")
+    tool_msg = ToolMessage(
+        content="",
+        tool_call_id=tool_call_id,
+        additional_kwargs={"documents": documents},
+    )
+    return {"messages": messages + [tool_msg]}
 
-def generate(state: GraphState, llm, rag_prompt):
-    """
-    Gera resposta usando o LLM e prompt template.
-    """
+def generate(state: MessagesState, llm, rag_prompt):
+    """Gera a resposta final utilizando o contexto recuperado."""
     logger.info("---GERANDO RESPOSTA---")
-    question = state["question"]
-    context = state["context"]
+    messages = state["messages"]
+    tool_msg = messages[-1]
+    documents = tool_msg.additional_kwargs.get("documents", [])
 
-    # Criar a cadeia de RAG
+    # Encontrar a última pergunta do usuário
+    question = next(
+        (m.content for m in reversed(messages) if isinstance(m, HumanMessage)),
+        "",
+    )
+
     rag_chain = (
         {"context": RunnablePassthrough(), "question": RunnablePassthrough()}
         | rag_prompt
         | llm
         | StrOutputParser()
     )
-    
-    # Formatar o contexto para o prompt
-    formatted_context = "\n\n".join([doc.page_content for doc in context])
 
+    formatted_context = "\n\n".join([doc.page_content for doc in documents])
     answer = rag_chain.invoke({"context": formatted_context, "question": question})
-    return {"question": question, "context": context, "answer": answer}
+    ai_msg = AIMessage(content=answer)
+    return {"messages": messages + [ai_msg]}
 
 # 3. Configurar o grafo LangGraph
 def create_rag_graph(vector_store, llm, rag_prompt, structured_llm):
     """
     Cria e compila o grafo LangGraph para o pipeline RAG.
     """
-    workflow = StateGraph(GraphState)
+    workflow = StateGraph(MessagesState)
 
     # Adicionar nós, passando os componentes necessários
     workflow.add_node("analyze_query", lambda state: analyze_query(state, structured_llm))
@@ -187,12 +175,13 @@ if __name__ == "__main__":
 
     for question in test_questions:
         logger.info(f"---TESTANDO PIPELINE RAG COM A PERGUNTA: '{question}'---")
-        final_state = rag_app.invoke({"question": question})
+        final_state = rag_app.invoke({"messages": [HumanMessage(content=question)]})
 
-        logger.info("---CONTEXTO RECUPERADO---")
-        for i, doc in enumerate(final_state["context"]):
+        tool_msg = final_state["messages"][-2]
+        for i, doc in enumerate(tool_msg.additional_kwargs.get("documents", [])):
             logger.info(f"Documento {i+1} (parcial): {doc.page_content[:300]}...")
             logger.info(f"Seção: {doc.metadata.get('section', 'N/A')}")
 
+        answer_msg = final_state["messages"][-1]
         logger.info("---RESPOSTA GERADA---")
-        logger.info(final_state["answer"])
+        logger.info(answer_msg.content)

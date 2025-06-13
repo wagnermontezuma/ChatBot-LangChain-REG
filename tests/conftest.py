@@ -139,11 +139,32 @@ def stub_libraries(monkeypatch):
 
     # langchain_core.messages
     messages_module = types.ModuleType("langchain_core.messages")
-    messages_module.BaseMessage = object
+    class BaseMessage:
+        def __init__(self, content="", **kwargs):
+            self.content = content
+            self.additional_kwargs = kwargs
+
+    class HumanMessage(BaseMessage):
+        pass
+
+    class AIMessage(BaseMessage):
+        pass
+
+    class ToolMessage(BaseMessage):
+        def __init__(self, content="", tool_call_id=None, **kwargs):
+            super().__init__(content, **kwargs)
+            self.tool_call_id = tool_call_id
+
+    messages_module.BaseMessage = BaseMessage
+    messages_module.HumanMessage = HumanMessage
+    messages_module.AIMessage = AIMessage
+    messages_module.ToolMessage = ToolMessage
     monkeypatch.setitem(sys.modules, "langchain_core.messages", messages_module)
 
     # langgraph.graph
     graph_module = types.ModuleType("langgraph.graph")
+    class MessagesState(dict):
+        pass
     class StateGraph:
         def __init__(self, _state):
             self.nodes = {}
@@ -164,6 +185,7 @@ def stub_libraries(monkeypatch):
                         state.update(func(state))
                     return state
             return App(self.nodes, self.entry)
+    graph_module.MessagesState = MessagesState
     graph_module.StateGraph = StateGraph
     graph_module.END = "end"
     monkeypatch.setitem(sys.modules, "langgraph.graph", graph_module)

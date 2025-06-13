@@ -2,6 +2,7 @@ langchain-text-splitters
 langchain-community
 langgraph
 langchain-google-genai
+langchain-core
 beautifulsoup4
 chromadb
 streamlit
