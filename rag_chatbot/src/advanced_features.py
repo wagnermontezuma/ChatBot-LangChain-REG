@@ -1,12 +1,11 @@
 import streamlit as st
 from typing import Iterator
-from langchain_core.messages import BaseMessage
-from langchain_core.runnables import Runnable, RunnablePassthrough
+from langchain_core.runnables import Runnable
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate # Necessário para o prompt de análise
 
 # Importar componentes do pipeline RAG (apenas o necessário, LLM e prompt serão passados)
-from src.rag_pipeline import initialize_rag_components, create_rag_graph, GraphState
+from src.rag_pipeline import GraphState
 
 # --- Streaming de Respostas ---
 def stream_rag_response(question: str, rag_app: Runnable, llm_model: any, rag_prompt_template: ChatPromptTemplate, vector_store: any) -> Iterator[str]:
