@@ -1,7 +1,8 @@
 import streamlit as st
 import os
 import sys
-from dotenv import load_dotenv
+
+from .config import load_env
 
 # Adicionar o diretório pai (rag_chatbot) ao sys.path para importações relativas
 # Isso é necessário quando o script é executado de dentro de um subdiretório (src)
@@ -11,8 +12,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from src.rag_pipeline import initialize_rag_components, create_rag_graph, GraphState
 from src.advanced_features import stream_rag_response # Importar a função de streaming
 
-# Carrega as variáveis de ambiente do arquivo .env
-load_dotenv(dotenv_path='rag_chatbot/.env')
+# Carrega as variáveis de ambiente apenas uma vez
+load_env()
 
 # --- Configuração da Página Streamlit ---
 st.set_page_config(page_title="RAG Chatbot with LangChain", layout="wide")
