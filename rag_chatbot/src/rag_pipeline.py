@@ -51,14 +51,14 @@ class GraphState(TypedDict):
 # Removendo a necessidade de importá-los diretamente de rag_pipeline em outros módulos.
 # Eles serão passados como argumentos ou obtidos do retorno de initialize_rag_components.
 
-def initialize_rag_components():
+def initialize_rag_components(doc_url: str | None = None):
     """
     Inicializa e retorna os componentes RAG (LLM, Prompt, Vector Store, Retriever, Structured LLM).
     """
     print("Inicializando componentes RAG...")
     
     # Carregar e dividir documentos para o vector store
-    documents = load_documents()
+    documents = load_documents(doc_url)
     chunks = split_documents(documents)
     vector_store = create_vector_store(chunks)
     
@@ -163,8 +163,14 @@ def create_rag_graph(vector_store, llm, rag_prompt, structured_llm):
     return app
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Testa o pipeline RAG.")
+    parser.add_argument("--url", help="URL dos documentos", default=None)
+    args = parser.parse_args()
+
     # Inicializar componentes RAG antes de criar e usar o grafo
-    components = initialize_rag_components()
+    components = initialize_rag_components(args.url)
     vector_store = components["vector_store"]
     llm = components["llm"]
     rag_prompt = components["rag_prompt"]
